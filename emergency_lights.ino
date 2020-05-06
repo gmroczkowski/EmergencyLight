@@ -1,4 +1,8 @@
-//Version 0.02b
+//Version 0.03b
+
+//Release notes 0.03 - 5 emergency circuts, auto on and off, manual on and off by web interface, states of the circuts,  clock, set up clock.
+
+//Release notes 0.02 - 3 emergency circuts, auto on, manual on and off by Web interface, states of the circuts, clock, set up clock.
 
 // 1. Circut test and switching on emergency light circut I, II, III
 // 2. WEB interface to switch on emergency light
@@ -31,6 +35,8 @@
 #define spizarnia_kominek_III 28                  //F25, 7
 
 //Emergency circut definition
+#define strych 33
+#define garaz 34
 #define parter 35
 #define pietro 36
 #define spizarnia 37
@@ -43,6 +49,8 @@ RTC zegar;
 byte Auto = 1;
 
 //Variables states for emergency lighting
+byte garageOn = 0;
+byte atticOn = 0;
 byte PantryOn = 0;
 byte UpstairsOn = 0;
 byte DownstairsOn = 0;
@@ -70,7 +78,7 @@ const long timeoutTime = 2000;
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network:
 byte mac[] = {
-    0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xE8};
+    0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEA};
 IPAddress ip(172, 26, 160, 19);
 
 // Initialize the Ethernet server library
@@ -90,11 +98,15 @@ void setup()
     pinMode(strych_II, INPUT);
     pinMode(spizarnia_kominek_III, INPUT);
 
+    pinMode(garaz, OUTPUT);
+    pinMode(strych, OUTPUT);
     pinMode(parter, OUTPUT);
     pinMode(pietro, OUTPUT);
     pinMode(spizarnia, OUTPUT);
 
     // Set outputs to HIGH
+    digitalWrite(garaz, HIGH);
+    digitalWrite(strych, HIGH);
     digitalWrite(parter, HIGH);
     digitalWrite(pietro, HIGH);
     digitalWrite(spizarnia, HIGH);
@@ -237,6 +249,34 @@ void loop()
                             Serial.println("Spizarnia switch to on");
                         }
 
+                        //Garage off
+                        if (header.indexOf("GET /4/off") >= 0)
+                        {
+                            garageOn = 0;
+                            Serial.println("Garaz switch to off");
+                        }
+
+                        //Garage on
+                        if (header.indexOf("GET /4/on") >= 0)
+                        {
+                            garageOn = 1;
+                            Serial.println("Garaz switch to on");
+                        }
+
+                        //Attic off
+                        if (header.indexOf("GET /5/off") >= 0)
+                        {
+                            atticOn = 0;
+                            Serial.println("Strych switch to off");
+                        }
+
+                        //Attic on
+                        if (header.indexOf("GET /5/on") >= 0)
+                        {
+                            atticOn = 1;
+                            Serial.println("Strych switch to on");
+                        }
+
                         //Setup clock
                         if (header.indexOf("GET /zegar/") >= 0)
                         { //Setup clock, clock format: \  
@@ -275,27 +315,51 @@ void loop()
                         };
                         client.println(F("</p>"));
 
-                        if (UpstairsOn == 1) //Turn on Downstairs circut
+                        if (UpstairsOn == 1) //Turn on Upstairs emergency circut
                         {
                             client.println(F("<p><a href=\"/2/off\"><button class=\"button\">Pietro On</button></a>"));
                             Serial.println("Pietro is on");
                         }
-                        if (UpstairsOn == 0) //Turn off Downstairs circut
+                        if (UpstairsOn == 0) //Turn off Upstairs emergency circut
                         {
                             client.println(F("<p><a href=\"/2/on\"><button class=\"button button2\">Pietro Off</button></a>"));
                             Serial.println("Parter is off");
                         };
                         client.println(F("</p>"));
 
-                        if (PantryOn == 1) //Turn on Downstairs circut
+                        if (PantryOn == 1) //Turn on Pantry Emergency circut
                         {
                             client.println(F("<p><a href=\"/3/off\"><button class=\"button\">Spizarnia On</button></a>"));
                             Serial.println("Spizarnia is on");
                         }
-                        if (PantryOn == 0) //Turn off Downstairs circut
+                        if (PantryOn == 0) //Turn off Pantry emergency circut
                         {
                             client.println(F("<p><a href=\"/3/on\"><button class=\"button button2\">Spizarnia Off</button></a>"));
                             Serial.println("Spizarnia is off");
+                        };
+                        client.println(F("</p>"));
+
+                        if (garageOn == 1) //Turn on Garage emergency circut
+                        {
+                            client.println(F("<p><a href=\"/4/off\"><button class=\"button\">Garaz On</button></a>"));
+                            Serial.println("Garaz is on");
+                        }
+                        if (garageOn == 0) //Turn off Garage emergency circut
+                        {
+                            client.println(F("<p><a href=\"/4/on\"><button class=\"button button2\">Garaz Off</button></a>"));
+                            Serial.println("Garaz is off");
+                        };
+                        client.println(F("</p>"));
+
+                        if (atticOn == 1) //Turn on Attic emergency circut
+                        {
+                            client.println(F("<p><a href=\"/5/off\"><button class=\"button\">Strych On</button></a>"));
+                            Serial.println("Strych is on");
+                        }
+                        if (atticOn == 0) //Turn off Attic emergency circut
+                        {
+                            client.println(F("<p><a href=\"/5/on\"><button class=\"button button2\">Strych Off</button></a>"));
+                            Serial.println("Strych is off");
                         };
                         client.println(F("</p>"));
 
@@ -331,7 +395,6 @@ void loop()
                         client.println(F("<tr><td>F25 Spizarnia, kominek</td><td>"));
                         client.println(F25_sk);
                         client.println(F("</td></tr>"));
-
 
                         client.println(F("</table>"));
 
@@ -373,30 +436,32 @@ void loop()
     F22_s = !digitalRead(strych_II);
     F25_sk = !digitalRead(spizarnia_kominek_III);
 
-    //Check, if emergency lightis is set to on
+    //Check, if emergency lights is set to on
     if (Auto == 1)
     {
-        //Turn off emergency circut if there are no phase signal at the circut for upstairs
+        //Turn off emergency circut if there are phase signal at the circut for upstairs
         if (F9_kssp == 1)
             UpstairsOn = 0;
         if (F10_kjm == 1)
             UpstairsOn = 0;
         if (F12_lgj == 1)
             UpstairsOn = 0;
-        if (F22_s == 1)
-            UpstairsOn = 0;
 
-        //Turn off emergency circut if there are no phase signal at the circut for downstairs
+        //Turn off emergency circut if there are phase signal at the circut for downstairs
         if (F11_sld == 1)
             DownstairsOn = 0;
-        if (F13_gw == 1)
-            DownstairsOn = 0;
 
-        //Turn off emergency circut if there are no phase signal at the circut for pantry
+        //Turn off emergency circut if there are phase signal at the circut for pantry
         if (F25_sk == 1)
             PantryOn = 0;
 
+        //Turn off emergency circut if there are phase signal at the circut Garage
+        if (F13_gw == 1)
+            garageOn = 0;
 
+        //Turn off emergency circut if there are phase signal at the circut for Attic
+        if (F22_s == 1)
+            atticOn = 0;
 
         //Turn on emergency circut if there are no phase signal at the circut for upstairs
         if (F9_kssp == 0)
@@ -405,18 +470,22 @@ void loop()
             UpstairsOn = 1;
         if (F12_lgj == 0)
             UpstairsOn = 1;
-        if (F22_s == 0)
-            UpstairsOn = 1;
 
         //Turn on emergency circut if there are no phase signal at the circut for downstairs
         if (F11_sld == 0)
-            DownstairsOn = 1;
-        if (F13_gw == 0)
             DownstairsOn = 1;
 
         //Turn on emergency circut if there are no phase signal at the circut for pantry
         if (F25_sk == 0)
             PantryOn = 1;
+
+        //Turn on emergency circut if there are no phase signal at the circut Garage
+        if (F11_sld == 0)
+            garageOn = 1;
+
+        //Turn off emergency circut if there are no phase signal at the circut for Attic
+        if (F22_s == 0)
+            atticOn = 1;
     }
 
     //Check and execute Upstairs
@@ -441,7 +510,7 @@ void loop()
         digitalWrite(parter, HIGH);
         //Serial.println("Parter set to off");
     }
-    //Check and execute Downstairs
+    //Check and execute Pantry
     if (PantryOn == 1)
     {
         digitalWrite(spizarnia, LOW);
@@ -452,4 +521,28 @@ void loop()
         digitalWrite(spizarnia, HIGH);
         //Serial.println("Spizarnia set to off");
     }
+    //Check and execute Garage
+    if (garageOn == 1)
+    {
+        digitalWrite(garaz, LOW);
+        //Serial.println("Garaz set to on");
+    }
+    if (garageOn == 0)
+    {
+        digitalWrite(garaz, HIGH);
+        //Serial.println("Garaz set to off");
+    }
+    //Check and execute Attic
+    if (atticOn == 1)
+    {
+        digitalWrite(strych, LOW);
+        //Serial.println("Strych set to on");
+    }
+    if (atticOn == 0)
+    {
+        digitalWrite(strych, HIGH);
+        //Serial.println("Strych set to off");
+    }
+
+
 }
