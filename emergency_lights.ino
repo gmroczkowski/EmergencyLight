@@ -1,6 +1,6 @@
 //Version 0.04b
 
-//Release notes 0.04 - 4-zones armed alarm checker, depencenceWardrobe to check if emergency cirtut should be switched, twice check,
+//Release notes 0.04 - 4-zones armed alarm checker, depencenceWardrobe to check if emergency cirtut should be switched, twice check - @gmroczkowski
 // function for 5 emergency circuts, auto on and off, manual on and off by web interface, states of the circuts,  clock, set up clock.
 
 //Release notes 0.03 - 5 emergency circuts, auto on and off, manual on and off by web interface, states of the circuts,  clock, set up clock.
