@@ -1,6 +1,6 @@
 //Version 0.04b
 
-//Release notes 0.04 - 4-zones armed alarm checker, depencenceWardrobe to check if emergency cirtut should be switched, twice check,
+//Release notes 0.04 - 4-zones armed alarm checker, depencenceWardrobe to check if emergency cirtut should be switched, twice check - @gmroczkowski
 // function for 5 emergency circuts, auto on and off, manual on and off by web interface, states of the circuts,  clock, set up clock.
 
 //Release notes 0.03 - 5 emergency circuts, auto on and off, manual on and off by web interface, states of the circuts,  clock, set up clock.
@@ -93,8 +93,8 @@ const long timeoutTime = 2000;
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network:
 byte mac[] = {
-    0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEA};
-IPAddress ip(172, 26, 160, 18);
+    0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xE9};
+IPAddress ip(172, 26, 160, 19);
 
 // Initialize the Ethernet server library
 // with the IP address and port you want to use
