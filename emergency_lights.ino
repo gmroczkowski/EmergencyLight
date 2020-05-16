@@ -1,4 +1,7 @@
-//Version 0.03b
+//Version 0.04b
+
+//Release notes 0.04 - 4-zones armed alarm checker, depencenceWardrobe to check if emergency cirtut should be switched, twice check,
+// function for 5 emergency circuts, auto on and off, manual on and off by web interface, states of the circuts,  clock, set up clock.
 
 //Release notes 0.03 - 5 emergency circuts, auto on and off, manual on and off by web interface, states of the circuts,  clock, set up clock.
 
@@ -41,6 +44,12 @@
 #define pietro 36
 #define spizarnia 37
 
+//Alarm checker pins
+#define garageArmed 3
+#define downstairsArmed 4
+#define upstairsArmed 5
+#define atticArmed 6
+
 //Initialize timer and RTC
 Timer odliczanie;
 RTC zegar;
@@ -54,6 +63,12 @@ byte atticOn = 0;
 byte PantryOn = 0;
 byte UpstairsOn = 0;
 byte DownstairsOn = 0;
+
+//Variable states for armed alarm
+byte GarageArmed = 0;
+byte DownstairsArmed = 0;
+byte UpstairsArmed = 0;
+byte AtticArmed = 0;
 
 //Variables states for lighting circut
 byte F9_kssp = 0;
@@ -79,12 +94,15 @@ const long timeoutTime = 2000;
 // The IP address will be dependent on your local network:
 byte mac[] = {
     0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEA};
-IPAddress ip(172, 26, 160, 19);
+IPAddress ip(172, 26, 160, 18);
 
 // Initialize the Ethernet server library
 // with the IP address and port you want to use
 // (port 80 is default for HTTP):
 EthernetServer server(80);
+
+// Predefinition
+void depencenceWardrobe(void);
 
 void setup()
 {
@@ -103,6 +121,11 @@ void setup()
     pinMode(parter, OUTPUT);
     pinMode(pietro, OUTPUT);
     pinMode(spizarnia, OUTPUT);
+
+    pinMode(garageArmed, INPUT);
+    pinMode(downstairsArmed, INPUT);
+    pinMode(upstairsArmed, INPUT);
+    pinMode(atticArmed, INPUT);
 
     // Set outputs to HIGH
     digitalWrite(garaz, HIGH);
@@ -179,9 +202,9 @@ void loop()
                         client.println(F("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}"));
                         client.println(F(".button { background-color: #195B6A; border: none; color: white; padding: 16px 40px;"));
                         client.println(F("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}"));
-                        client.println(F(".button2 {background-color: #77878A;}</style></head>"));
+                        client.println(F(".button2 {background-color: #77878A;}table, th, td {  border: 1px solid black;margin-left:auto;margin-right:auto;}</style></head>"));
                         // Web Page Heading
-                        client.println(F("<body><H1>Oswietlenie awaryjne Ozarow ver. 0.02b</H1>"));
+                        client.println(F("<body><H1>Oswietlenie awaryjne Ozarow ver. 0.04b</H1>"));
                         client.println(F("<H3>Status:</H3>"));
                         client.println(F("<h5> Dzis: "));
                         client.println(zegar.getDate());
@@ -291,6 +314,9 @@ void loop()
                             Serial.println("Set up clock");
                         };
 
+                        //Check, if emergency lights should be set to on
+                        depencenceWardrobe();
+
                         if (Auto == 1) //Turn on auto
                         {
                             client.println(F("<p><a href=\"/0/off\"><button class=\"button\">Auto</button></a>"));
@@ -366,7 +392,9 @@ void loop()
                         client.println(F("<a href=\"/nothing\"><button class=\"button button2\">Refresh </button></a></p>"));
 
                         client.println(F("<H3>Stan obwodow:</H3>"));
-                        client.println(F("<table><tr><th>Obwod</th><th>Stan</th></tr>"));
+                        client.println(F("<table style="
+                                         "background-color:#FFFFFF"
+                                         "><tr><th>Obwod</th><th>Stan</th></tr>"));
 
                         client.println(F("<tr><td>F9 Klatka schodowa, sypialnia, pracownia</td><td>"));
                         client.println(F9_kssp);
@@ -397,6 +425,25 @@ void loop()
                         client.println(F("</td></tr>"));
 
                         client.println(F("</table>"));
+                        client.println(F("<H3>Stan alarmu:</H3>"));
+                        client.println(F("<H5><table><tr><th>Strefa</th><th>Stan</th></tr>"));
+
+                        client.println(F("<tr><td>Strych</td><td>"));
+                        client.println(AtticArmed);
+                        client.println(F("</td></tr>"));
+
+                        client.println(F("<tr><td>Pietro</td><td>"));
+                        client.println(UpstairsArmed);
+                        client.println(F("</td></tr>"));
+
+                        client.println(F("<tr><td>Parter</td><td>"));
+                        client.println(DownstairsArmed);
+                        client.println(F("</td></tr>"));
+
+                        client.println(F("<tr><td>Garaz</td><td>"));
+                        client.println(GarageArmed);
+                        client.println(F("</td></tr>"));
+                        client.println(F("</table></H5>"));
 
                         //-------------Koniec
                         client.println();
@@ -425,7 +472,13 @@ void loop()
         client.stop();
         //Serial.println("Client disconnected.");
         //Serial.println("");
-    }
+    };
+
+    //Check alarm state
+    GarageArmed = digitalRead(garageArmed);
+    DownstairsArmed = digitalRead(downstairsArmed);
+    UpstairsArmed = digitalRead(upstairsArmed);
+    AtticArmed = digitalRead(atticArmed);
 
     //Check lighting circut state
     F9_kssp = !digitalRead(klatka_schodowa_sypialnia_pracownia_II);
@@ -436,57 +489,8 @@ void loop()
     F22_s = !digitalRead(strych_II);
     F25_sk = !digitalRead(spizarnia_kominek_III);
 
-    //Check, if emergency lights is set to on
-    if (Auto == 1)
-    {
-        //Turn off emergency circut if there are phase signal at the circut for upstairs
-        if (F9_kssp == 1)
-            UpstairsOn = 0;
-        if (F10_kjm == 1)
-            UpstairsOn = 0;
-        if (F12_lgj == 1)
-            UpstairsOn = 0;
-
-        //Turn off emergency circut if there are phase signal at the circut for downstairs
-        if (F11_sld == 1)
-            DownstairsOn = 0;
-
-        //Turn off emergency circut if there are phase signal at the circut for pantry
-        if (F25_sk == 1)
-            PantryOn = 0;
-
-        //Turn off emergency circut if there are phase signal at the circut Garage
-        if (F13_gw == 1)
-            garageOn = 0;
-
-        //Turn off emergency circut if there are phase signal at the circut for Attic
-        if (F22_s == 1)
-            atticOn = 0;
-
-        //Turn on emergency circut if there are no phase signal at the circut for upstairs
-        if (F9_kssp == 0)
-            UpstairsOn = 1;
-        if (F10_kjm == 0)
-            UpstairsOn = 1;
-        if (F12_lgj == 0)
-            UpstairsOn = 1;
-
-        //Turn on emergency circut if there are no phase signal at the circut for downstairs
-        if (F11_sld == 0)
-            DownstairsOn = 1;
-
-        //Turn on emergency circut if there are no phase signal at the circut for pantry
-        if (F25_sk == 0)
-            PantryOn = 1;
-
-        //Turn on emergency circut if there are no phase signal at the circut Garage
-        if (F11_sld == 0)
-            garageOn = 1;
-
-        //Turn off emergency circut if there are no phase signal at the circut for Attic
-        if (F22_s == 0)
-            atticOn = 1;
-    }
+    //Check, if emergency lights should be set to on
+    depencenceWardrobe();
 
     //Check and execute Upstairs
     if (UpstairsOn == 1)
@@ -543,6 +547,72 @@ void loop()
         digitalWrite(strych, HIGH);
         //Serial.println("Strych set to off");
     }
+}
 
+void depencenceWardrobe()
+{
+    if (Auto == 1)
+    {
+        //Turn off emergency circut if there are phase signal at the circut for upstairs
+        if (F9_kssp == 1)
+            UpstairsOn = 0;
+        if (F10_kjm == 1)
+            UpstairsOn = 0;
+        if (F12_lgj == 1)
+            UpstairsOn = 0;
 
+        //Turn off emergency circut if there are phase signal at the circut for downstairs
+        if (F11_sld == 1)
+            DownstairsOn = 0;
+
+        //Turn off emergency circut if there are phase signal at the circut for pantry
+        if (F25_sk == 1)
+            PantryOn = 0;
+
+        //Turn off emergency circut if there are phase signal at the circut Garage
+        if (F13_gw == 1)
+            garageOn = 0;
+
+        //Turn off emergency circut if there are phase signal at the circut for Attic
+        if (F22_s == 1)
+            atticOn = 0;
+
+        //Turn on emergency circut if there are no phase signal at the circut for upstairs
+        if (UpstairsArmed == 0) //If alarm is not armed
+        {
+            if (F9_kssp == 0)
+                UpstairsOn = 1;
+            if (F10_kjm == 0)
+                UpstairsOn = 1;
+            if (F12_lgj == 0)
+                UpstairsOn = 1;
+        }
+
+        //Turn on emergency circut if there are no phase signal at the circut for downstairs
+        if (DownstairsArmed == 0) //If alarm is not armed
+        {
+            if (F11_sld == 0)
+                DownstairsOn = 1;
+        }
+
+        //Turn on emergency circut if there are no phase signal at the circut for pantry
+        if (DownstairsArmed == 0) //If alarm is not armed
+        {
+            if (F25_sk == 0) //No armed zone in the pantry, so we don't have to check anything
+                PantryOn = 1;
+        }
+        //Turn on emergency circut if there are no phase signal at the circut Garage
+        if (GarageArmed == 0) //If alarm is not armed
+        {
+            if (F13_gw == 0)
+                garageOn = 1;
+        }
+
+        //Turn off emergency circut if there are no phase signal at the circut for Attic
+        if (AtticArmed == 0) //If alarm is not armed
+        {
+            if (F22_s == 0)
+                atticOn = 1;
+        }
+    }
 }
