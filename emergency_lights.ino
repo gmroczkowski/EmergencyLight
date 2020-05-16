@@ -93,8 +93,8 @@ const long timeoutTime = 2000;
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network:
 byte mac[] = {
-    0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEA};
-IPAddress ip(172, 26, 160, 18);
+    0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xE9};
+IPAddress ip(172, 26, 160, 19);
 
 // Initialize the Ethernet server library
 // with the IP address and port you want to use
